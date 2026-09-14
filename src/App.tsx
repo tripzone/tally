@@ -6,6 +6,7 @@ import { addDays, dateRange, todayStr } from './dateUtils';
 import ScoreGrid from './components/ScoreGrid';
 import AddActivityModal from './components/AddActivityModal';
 import ColumnSettingsModal from './components/ColumnSettingsModal';
+import GoalsModal from './components/GoalsModal';
 import StatsPanel from './components/StatsPanel';
 import SignIn from './components/SignIn';
 import { useAuth } from './hooks/useAuth';
@@ -61,6 +62,7 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
   const [oldestDate, setOldestDate] = useState(() => addDays(todayStr(), -INITIAL_DAYS_BACK));
   const [showAddForm, setShowAddForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGoals, setShowGoals] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +165,14 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
           <button
             type="button"
             className="gear-btn"
+            onClick={() => setShowGoals(true)}
+            aria-label="Goals"
+          >
+            🎯
+          </button>
+          <button
+            type="button"
+            className="gear-btn"
             onClick={() => setShowSettings(true)}
             aria-label="Column settings"
           >
@@ -190,10 +200,18 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
       {showSettings && (
         <ColumnSettingsModal
           activities={activities}
-          totalGoal={totalGoal}
           onCancel={() => setShowSettings(false)}
           onReorder={handleReorderActivities}
           onUpdate={handleUpdateActivity}
+        />
+      )}
+
+      {showGoals && (
+        <GoalsModal
+          activities={activities}
+          totalGoal={totalGoal}
+          onCancel={() => setShowGoals(false)}
+          onUpdateActivity={handleUpdateActivity}
           onUpdateTotalGoal={handleUpdateTotalGoal}
         />
       )}

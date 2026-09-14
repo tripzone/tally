@@ -5,20 +5,16 @@ const ROW_HEIGHT = 52;
 
 interface ColumnSettingsModalProps {
   activities: Activity[];
-  totalGoal: number | null;
   onCancel: () => void;
   onReorder: (next: Activity[]) => void;
   onUpdate: (id: string, updates: Partial<Omit<Activity, 'id'>>) => void;
-  onUpdateTotalGoal: (goal: number | null) => void;
 }
 
 export default function ColumnSettingsModal({
   activities,
-  totalGoal,
   onCancel,
   onReorder,
   onUpdate,
-  onUpdateTotalGoal,
 }: ColumnSettingsModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [order, setOrder] = useState<string[]>(() => activities.map((a) => a.id));
@@ -103,7 +99,6 @@ export default function ColumnSettingsModal({
                 );
               })}
             </div>
-            <TotalGoalField totalGoal={totalGoal} onUpdateTotalGoal={onUpdateTotalGoal} />
           </>
         )}
 
@@ -158,7 +153,6 @@ interface ActivityEditPanelProps {
 
 function ActivityEditPanel({ activity, onBack, onUpdate }: ActivityEditPanelProps) {
   const [name, setName] = useState(activity.name);
-  const [goalInput, setGoalInput] = useState(activity.goal != null ? String(activity.goal) : '');
   const isText = activity.kind === 'text';
 
   function commitName() {
@@ -168,16 +162,6 @@ function ActivityEditPanel({ activity, onBack, onUpdate }: ActivityEditPanelProp
     } else {
       setName(activity.name);
     }
-  }
-
-  function commitGoal() {
-    const trimmed = goalInput.trim();
-    if (trimmed === '') {
-      if (activity.goal != null) onUpdate(activity.id, { goal: null });
-      return;
-    }
-    const num = Number(trimmed);
-    if (!Number.isNaN(num) && num !== activity.goal) onUpdate(activity.id, { goal: num });
   }
 
   return (
@@ -302,53 +286,8 @@ function ActivityEditPanel({ activity, onBack, onUpdate }: ActivityEditPanelProp
               </button>
             </div>
           </div>
-
-          <label className="field">
-            <span>Goal (optional)</span>
-            <input
-              className="settings-name-input"
-              inputMode="decimal"
-              value={goalInput}
-              onChange={(e) => setGoalInput(e.target.value)}
-              onBlur={commitGoal}
-              placeholder="e.g. 100"
-            />
-          </label>
         </>
       )}
     </div>
-  );
-}
-
-interface TotalGoalFieldProps {
-  totalGoal: number | null;
-  onUpdateTotalGoal: (goal: number | null) => void;
-}
-
-function TotalGoalField({ totalGoal, onUpdateTotalGoal }: TotalGoalFieldProps) {
-  const [value, setValue] = useState(totalGoal != null ? String(totalGoal) : '');
-
-  function commit() {
-    const trimmed = value.trim();
-    if (trimmed === '') {
-      if (totalGoal != null) onUpdateTotalGoal(null);
-      return;
-    }
-    const num = Number(trimmed);
-    if (!Number.isNaN(num) && num !== totalGoal) onUpdateTotalGoal(num);
-  }
-
-  return (
-    <label className="field total-goal-field">
-      <span>Total goal (optional)</span>
-      <input
-        className="settings-name-input"
-        inputMode="decimal"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={commit}
-        placeholder="e.g. 500"
-      />
-    </label>
   );
 }

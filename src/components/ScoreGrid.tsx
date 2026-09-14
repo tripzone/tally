@@ -65,7 +65,7 @@ export default function ScoreGrid({
   return (
     <div className="grid-wrap">
       <div className="grid-scroll" ref={scrollRef} onScroll={handleScroll}>
-        <div className="grid" style={{ gridTemplateColumns: gridTemplateColumns(activities.length) }}>
+        <div className="grid" style={{ gridTemplateColumns: gridTemplateColumns(activities) }}>
           <div className="cell header-cell corner-cell">Day</div>
           {activities.map((activity) => (
             <div
