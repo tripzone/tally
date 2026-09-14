@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 import type { Activity, ActivityType, DayScores, DaysMap, TapMode } from './types';
-import { loadActivities, saveActivities, loadDays, saveDayScores } from './storage';
+import { loadUserData, saveActivities, saveTotalGoal, loadDays, saveDayScores } from './storage';
 import { addDays, dateRange, todayStr } from './dateUtils';
 import ScoreGrid from './components/ScoreGrid';
-import ModeToggle from './components/ModeToggle';
 import AddActivityModal from './components/AddActivityModal';
 import ColumnSettingsModal from './components/ColumnSettingsModal';
 import StatsPanel from './components/StatsPanel';
@@ -14,6 +13,8 @@ import { useAuth } from './hooks/useAuth';
 const INITIAL_DAYS_BACK = 60;
 const LOAD_MORE_DAYS = 30;
 const STEP = 0.5;
+
+const NUMBER_ONLY_FIELDS = ['type', 'statMode', 'showInMetrics', 'contributeToTotal', 'goal'] as const;
 
 function round(n: number): number {
   return Math.round(n * 10) / 10;
@@ -54,6 +55,7 @@ interface BoardProps {
 function Board({ uid, displayName, onSignOut }: BoardProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [days, setDays] = useState<DaysMap>({});
+  const [totalGoal, setTotalGoal] = useState<number | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [mode, setMode] = useState<TapMode>('add');
   const [oldestDate, setOldestDate] = useState(() => addDays(todayStr(), -INITIAL_DAYS_BACK));
@@ -63,9 +65,10 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
   useEffect(() => {
     let cancelled = false;
     setDataLoading(true);
-    Promise.all([loadActivities(uid), loadDays(uid)]).then(([loadedActivities, loadedDays]) => {
+    Promise.all([loadUserData(uid), loadDays(uid)]).then(([userData, loadedDays]) => {
       if (cancelled) return;
-      setActivities(loadedActivities);
+      setActivities(userData.activities);
+      setTotalGoal(userData.totalGoal);
       setDays(loadedDays);
       setDataLoading(false);
     });
@@ -116,16 +119,9 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
     setOldestDate((prev) => addDays(prev, -LOAD_MORE_DAYS));
   }
 
-  function handleMoveActivity(id: string, direction: 'up' | 'down') {
-    setActivities((prev) => {
-      const index = prev.findIndex((a) => a.id === id);
-      const swapWith = direction === 'up' ? index - 1 : index + 1;
-      if (index === -1 || swapWith < 0 || swapWith >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[swapWith]] = [next[swapWith], next[index]];
-      saveActivities(uid, next).catch((err) => console.error('Failed to save activity order', err));
-      return next;
-    });
+  function handleReorderActivities(next: Activity[]) {
+    setActivities(next);
+    saveActivities(uid, next).catch((err) => console.error('Failed to save activity order', err));
   }
 
   function handleUpdateActivity(id: string, updates: Partial<Omit<Activity, 'id'>>) {
@@ -133,14 +129,22 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
       const next = prev.map((a) => {
         if (a.id !== id) return a;
         const merged: Activity = { ...a, ...updates };
-        // Firestore rejects `undefined` field values -- drop `type` entirely
-        // rather than writing it as undefined when switching to a text column.
-        if (merged.kind === 'text') delete merged.type;
+        // Firestore rejects `undefined` field values -- drop number-only
+        // fields entirely rather than writing them as undefined when
+        // switching to a text column.
+        if (merged.kind === 'text') {
+          for (const field of NUMBER_ONLY_FIELDS) delete merged[field];
+        }
         return merged;
       });
       saveActivities(uid, next).catch((err) => console.error('Failed to save activity', err));
       return next;
     });
+  }
+
+  function handleUpdateTotalGoal(goal: number | null) {
+    setTotalGoal(goal);
+    saveTotalGoal(uid, goal).catch((err) => console.error('Failed to save total goal', err));
   }
 
   if (dataLoading) {
@@ -156,7 +160,6 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
       <header className="app-header">
         <h1>Tally</h1>
         <div className="header-actions">
-          <ModeToggle mode={mode} onChange={setMode} />
           <button
             type="button"
             className="gear-btn"
@@ -181,15 +184,17 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
           onLoadMore={handleLoadMore}
           onRequestAddActivity={() => setShowAddForm(true)}
         />
-        <StatsPanel activities={activities} days={days} />
+        <StatsPanel activities={activities} days={days} totalGoal={totalGoal} mode={mode} onModeChange={setMode} />
       </div>
 
       {showSettings && (
         <ColumnSettingsModal
           activities={activities}
+          totalGoal={totalGoal}
           onCancel={() => setShowSettings(false)}
-          onMove={handleMoveActivity}
+          onReorder={handleReorderActivities}
           onUpdate={handleUpdateActivity}
+          onUpdateTotalGoal={handleUpdateTotalGoal}
         />
       )}
 

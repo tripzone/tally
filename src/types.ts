@@ -1,17 +1,19 @@
 export type ActivityType = 'positive' | 'negative';
-
-// numeric-total: tappable +/-0.5, summed into daily/all-time totals.
-// numeric-average: tappable +/-0.5, but stats show an average and it's
-//   excluded from totals (e.g. a mood rating).
-// text: a free-text note per day, not tappable, never contributes to totals.
-export type ActivityKind = 'numeric-total' | 'numeric-average' | 'text';
+export type ActivityKind = 'number' | 'text';
+export type StatMode = 'sum' | 'average';
 
 export interface Activity {
   id: string;
   name: string;
   kind: ActivityKind;
-  // Only meaningful for numeric kinds -- controls tap direction/styling.
+  // Everything below only applies when kind === 'number'. Omit (don't set
+  // to undefined -- Firestore rejects that) rather than including when the
+  // column is text.
   type?: ActivityType;
+  statMode?: StatMode; // default 'sum'
+  showInMetrics?: boolean; // default true
+  contributeToTotal?: boolean; // default true
+  goal?: number | null; // optional annual target
 }
 
 // activityId -> value for a single day (a number for numeric activities, a

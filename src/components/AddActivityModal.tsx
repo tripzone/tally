@@ -9,7 +9,6 @@ interface AddActivityModalProps {
 export default function AddActivityModal({ onCancel, onSubmit }: AddActivityModalProps) {
   const [name, setName] = useState('');
   const [isText, setIsText] = useState(false);
-  const [averaged, setAveraged] = useState(false);
   const [type, setType] = useState<ActivityType>('positive');
 
   function handleSubmit(e: FormEvent) {
@@ -19,7 +18,7 @@ export default function AddActivityModal({ onCancel, onSubmit }: AddActivityModa
     if (isText) {
       onSubmit({ name: trimmed, kind: 'text' });
     } else {
-      onSubmit({ name: trimmed, kind: averaged ? 'numeric-average' : 'numeric-total', type });
+      onSubmit({ name: trimmed, kind: 'number', type });
     }
   }
 
@@ -52,46 +51,25 @@ export default function AddActivityModal({ onCancel, onSubmit }: AddActivityModa
           </div>
         </div>
         {!isText && (
-          <>
-            <div className="field">
-              <span>Direction</span>
-              <div className="type-choice">
-                <button
-                  type="button"
-                  className={`type-btn positive ${type === 'positive' ? 'active' : ''}`}
-                  onClick={() => setType('positive')}
-                >
-                  Positive (+)
-                </button>
-                <button
-                  type="button"
-                  className={`type-btn negative ${type === 'negative' ? 'active' : ''}`}
-                  onClick={() => setType('negative')}
-                >
-                  Negative (−)
-                </button>
-              </div>
+          <div className="field">
+            <span>Direction</span>
+            <div className="type-choice">
+              <button
+                type="button"
+                className={`type-btn positive ${type === 'positive' ? 'active' : ''}`}
+                onClick={() => setType('positive')}
+              >
+                Positive (+)
+              </button>
+              <button
+                type="button"
+                className={`type-btn negative ${type === 'negative' ? 'active' : ''}`}
+                onClick={() => setType('negative')}
+              >
+                Negative (−)
+              </button>
             </div>
-            <div className="field">
-              <span>Stats</span>
-              <div className="type-choice">
-                <button
-                  type="button"
-                  className={`type-btn ${!averaged ? 'active' : ''}`}
-                  onClick={() => setAveraged(false)}
-                >
-                  Totalled
-                </button>
-                <button
-                  type="button"
-                  className={`type-btn ${averaged ? 'active' : ''}`}
-                  onClick={() => setAveraged(true)}
-                >
-                  Averaged
-                </button>
-              </div>
-            </div>
-          </>
+          </div>
         )}
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onCancel}>
