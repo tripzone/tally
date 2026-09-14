@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Activity, DayScores, DaysMap } from '../types';
-import { formatDisplayDateParts } from '../dateUtils';
+import { addDays, formatDisplayDateParts, todayStr } from '../dateUtils';
 import { gridTemplateColumns } from '../gridLayout';
 
 interface ScoreGridProps {
@@ -124,12 +124,16 @@ function Row({
   onCommitText,
   onCancelEdit,
 }: RowProps) {
-  const isToday = dateStr === new Date().toISOString().slice(0, 10);
+  const today = todayStr();
+  const isToday = dateStr === today;
+  const isYesterday = dateStr === addDays(today, -1);
   const { primary, secondary } = formatDisplayDateParts(dateStr);
 
   return (
     <>
-      <div className={`cell date-cell ${isToday ? 'is-today' : ''}`}>
+      <div
+        className={`cell date-cell ${isToday ? 'is-today row-today' : ''} ${isYesterday ? 'row-yesterday' : ''}`}
+      >
         <span className="date-primary">{primary}</span>
         <span className="date-secondary">{secondary}</span>
       </div>

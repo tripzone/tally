@@ -26,6 +26,15 @@ export function dateRange(start: string, end: string): string[] {
   return dates;
 }
 
+// The Monday that starts the calendar week containing `dateStr`.
+export function weekStart(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const day = d.getDay(); // 0 = Sun .. 6 = Sat
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diff);
+  return toDateStr(d);
+}
+
 // Two-line date display: a big primary label (weekday, or Today/Yesterday)
 // and a smaller secondary label (the actual month/day) underneath it.
 export function formatDisplayDateParts(dateStr: string): { primary: string; secondary: string } {

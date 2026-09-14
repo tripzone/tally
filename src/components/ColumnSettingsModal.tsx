@@ -83,7 +83,9 @@ export default function ColumnSettingsModal({
         ) : (
           <>
             <h2>Columns</h2>
-            <p className="settings-hint">Drag ≡ to reorder, tap ✎ to edit.</p>
+            <p className="settings-hint">
+              Drag ≡ to reorder · M = shown in metrics · Σ = counts toward total · ✎ to edit
+            </p>
             <div className="settings-list">
               {order.map((id) => {
                 const activity = byId.get(id);
@@ -95,6 +97,7 @@ export default function ColumnSettingsModal({
                     isDragging={draggingId === id}
                     onPointerDown={handlePointerDown}
                     onEdit={setEditingId}
+                    onUpdate={onUpdate}
                   />
                 );
               })}
@@ -117,10 +120,13 @@ interface ColumnRowProps {
   isDragging: boolean;
   onPointerDown: (e: ReactPointerEvent, id: string) => void;
   onEdit: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<Omit<Activity, 'id'>>) => void;
 }
 
-function ColumnRow({ activity, isDragging, onPointerDown, onEdit }: ColumnRowProps) {
+function ColumnRow({ activity, isDragging, onPointerDown, onEdit, onUpdate }: ColumnRowProps) {
   const isText = activity.kind === 'text';
+  const shown = activity.showInMetrics !== false;
+  const inTotal = activity.contributeToTotal !== false;
   return (
     <div className={`settings-list-row ${isDragging ? 'dragging' : ''}`}>
       <button
@@ -133,6 +139,28 @@ function ColumnRow({ activity, isDragging, onPointerDown, onEdit }: ColumnRowPro
       </button>
       <span className="settings-list-name">{activity.name}</span>
       <span className="settings-list-kind">{isText ? 'Text' : activity.type === 'negative' ? '−' : '+'}</span>
+      {!isText && (
+        <>
+          <button
+            type="button"
+            className={`mini-toggle ${shown ? 'on' : 'off'}`}
+            onClick={() => onUpdate(activity.id, { showInMetrics: !shown })}
+            aria-label={shown ? `Hide ${activity.name} from metrics` : `Show ${activity.name} in metrics`}
+            title={shown ? 'Shown in metrics' : 'Hidden from metrics'}
+          >
+            M
+          </button>
+          <button
+            type="button"
+            className={`mini-toggle ${inTotal ? 'on' : 'off'}`}
+            onClick={() => onUpdate(activity.id, { contributeToTotal: !inTotal })}
+            aria-label={inTotal ? `Exclude ${activity.name} from total` : `Include ${activity.name} in total`}
+            title={inTotal ? 'Counts toward total' : 'Excluded from total'}
+          >
+            Σ
+          </button>
+        </>
+      )}
       <button
         type="button"
         className="edit-btn"
@@ -243,46 +271,6 @@ function ActivityEditPanel({ activity, onBack, onUpdate }: ActivityEditPanelProp
                 onClick={() => onUpdate(activity.id, { statMode: 'average' })}
               >
                 Averaged
-              </button>
-            </div>
-          </div>
-
-          <div className="field">
-            <span>Metrics tile</span>
-            <div className="type-choice">
-              <button
-                type="button"
-                className={`type-btn ${activity.showInMetrics !== false ? 'active' : ''}`}
-                onClick={() => onUpdate(activity.id, { showInMetrics: true })}
-              >
-                Show
-              </button>
-              <button
-                type="button"
-                className={`type-btn ${activity.showInMetrics === false ? 'active' : ''}`}
-                onClick={() => onUpdate(activity.id, { showInMetrics: false })}
-              >
-                Hide
-              </button>
-            </div>
-          </div>
-
-          <div className="field">
-            <span>Total</span>
-            <div className="type-choice">
-              <button
-                type="button"
-                className={`type-btn ${activity.contributeToTotal !== false ? 'active' : ''}`}
-                onClick={() => onUpdate(activity.id, { contributeToTotal: true })}
-              >
-                Included
-              </button>
-              <button
-                type="button"
-                className={`type-btn ${activity.contributeToTotal === false ? 'active' : ''}`}
-                onClick={() => onUpdate(activity.id, { contributeToTotal: false })}
-              >
-                Excluded
               </button>
             </div>
           </div>

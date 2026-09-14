@@ -183,7 +183,7 @@
 .grid {
   display: grid;
   grid-template-rows: 110px;
-  grid-auto-rows: 48px;
+  grid-auto-rows: minmax(44px, auto);
   width: 100%;
   min-width: max-content;
 }
@@ -281,6 +281,22 @@
 
 .date-cell.is-today .date-primary {
   color: var(--text);
+}
+
+.date-cell.row-today {
+  height: 72px;
+}
+
+.date-cell.row-today .date-primary {
+  font-size: 16px;
+}
+
+.date-cell.row-yesterday {
+  height: 60px;
+}
+
+.date-cell.row-yesterday .date-primary {
+  font-size: 14px;
 }
 
 .score-cell {
@@ -534,6 +550,31 @@
   text-align: center;
 }
 
+.mini-toggle {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.mini-toggle.on {
+  background: var(--positive-bg);
+  color: var(--positive);
+  border-color: var(--positive);
+}
+
+.mini-toggle.off {
+  opacity: 0.5;
+}
+
 .edit-btn {
   flex-shrink: 0;
   width: 32px;
@@ -582,18 +623,10 @@
   background: var(--surface-2);
 }
 
-/* Goals modal */
+/* Metric detail modal */
 
-.goals-modal {
+.metric-detail-modal {
   max-height: 84vh;
-}
-
-.goals-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
 }
 
 .goal-row {
@@ -601,7 +634,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 
 .goal-row-label {
@@ -620,16 +653,78 @@
   text-align: right;
 }
 
-.goal-row-total {
-  border-bottom: none;
-  border-top: 1px solid var(--border);
-  margin-top: 4px;
-  padding-top: 14px;
+.metric-chart-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
 }
 
-.goal-row-total .goal-row-label {
+.metric-chart {
+  position: relative;
+}
+
+.metric-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: none;
+}
+
+.chart-baseline {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-goal-line {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.7;
+}
+
+.chart-goal-label {
+  fill: var(--accent);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.chart-line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-dot {
+  fill: var(--accent);
+}
+
+.chart-crosshair {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.chart-value-label {
+  fill: var(--text);
+  font-size: 11px;
   font-weight: 800;
-  font-size: 15px;
+}
+
+.chart-axis-label {
+  fill: var(--text-muted);
+  font-size: 8px;
+}
+
+.chart-tooltip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.chart-tooltip strong {
+  color: var(--text);
 }
 
 /* Stats panel */
@@ -670,6 +765,11 @@
   border-radius: 10px;
   background: var(--surface-2);
   text-align: center;
+  cursor: pointer;
+}
+
+.stat-box:active {
+  background: var(--border);
 }
 
 .stat-box-label {
@@ -708,6 +808,11 @@
   border-radius: 12px;
   background: var(--surface-2);
   text-align: center;
+  cursor: pointer;
+}
+
+.total-block:active {
+  background: var(--border);
 }
 
 .total-block-label {
