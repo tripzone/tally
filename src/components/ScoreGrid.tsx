@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Activity, DayScores, DaysMap } from '../types';
-import { formatDisplayDate } from '../dateUtils';
+import { formatDisplayDateParts } from '../dateUtils';
 import { gridTemplateColumns } from '../gridLayout';
 
 interface ScoreGridProps {
@@ -8,6 +8,7 @@ interface ScoreGridProps {
   days: DaysMap;
   dates: string[]; // ascending, oldest first, today last
   onTap: (dateStr: string, activity: Activity) => void;
+  onTextChange: (dateStr: string, activity: Activity, value: string) => void;
   onLoadMore: () => void;
   onRequestAddActivity: () => void;
 }
@@ -19,12 +20,14 @@ export default function ScoreGrid({
   days,
   dates,
   onTap,
+  onTextChange,
   onLoadMore,
   onRequestAddActivity,
 }: ScoreGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pendingAdjustRef = useRef<number | null>(null);
   const hasScrolledToBottomRef = useRef(false);
+  const [editingCell, setEditingCell] = useState<{ dateStr: string; activityId: string } | null>(null);
 
   // Land on today's row on first load.
   useEffect(() => {
@@ -54,20 +57,24 @@ export default function ScoreGrid({
     }
   }
 
+  function commitText(dateStr: string, activity: Activity, value: string) {
+    setEditingCell(null);
+    onTextChange(dateStr, activity, value);
+  }
+
   return (
     <div className="grid-wrap">
       <div className="grid-scroll" ref={scrollRef} onScroll={handleScroll}>
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: gridTemplateColumns(activities.length) }}
-        >
+        <div className="grid" style={{ gridTemplateColumns: gridTemplateColumns(activities.length) }}>
           <div className="cell header-cell corner-cell">Day</div>
           {activities.map((activity) => (
-            <div key={activity.id} className={`cell header-cell activity-header ${activity.type}`}>
+            <div
+              key={activity.id}
+              className={`cell header-cell activity-header ${activity.kind === 'text' ? 'text' : activity.type}`}
+            >
               <span className="activity-name">{activity.name}</span>
             </div>
           ))}
-          <div className="cell header-cell total-header">Total</div>
           <button
             type="button"
             className="cell header-cell add-activity-btn"
@@ -84,6 +91,10 @@ export default function ScoreGrid({
               activities={activities}
               dayScores={days[dateStr] ?? {}}
               onTap={onTap}
+              editingCell={editingCell}
+              onStartEdit={(activityId) => setEditingCell({ dateStr, activityId })}
+              onCommitText={commitText}
+              onCancelEdit={() => setEditingCell(null)}
             />
           ))}
         </div>
@@ -97,17 +108,61 @@ interface RowProps {
   activities: Activity[];
   dayScores: DayScores;
   onTap: (dateStr: string, activity: Activity) => void;
+  editingCell: { dateStr: string; activityId: string } | null;
+  onStartEdit: (activityId: string) => void;
+  onCommitText: (dateStr: string, activity: Activity, value: string) => void;
+  onCancelEdit: () => void;
 }
 
-function Row({ dateStr, activities, dayScores, onTap }: RowProps) {
-  const total = activities.reduce((sum, a) => sum + (dayScores[a.id] ?? 0), 0);
+function Row({
+  dateStr,
+  activities,
+  dayScores,
+  onTap,
+  editingCell,
+  onStartEdit,
+  onCommitText,
+  onCancelEdit,
+}: RowProps) {
   const isToday = dateStr === new Date().toISOString().slice(0, 10);
+  const { primary, secondary } = formatDisplayDateParts(dateStr);
 
   return (
     <>
-      <div className={`cell date-cell ${isToday ? 'is-today' : ''}`}>{formatDisplayDate(dateStr)}</div>
+      <div className={`cell date-cell ${isToday ? 'is-today' : ''}`}>
+        <span className="date-primary">{primary}</span>
+        <span className="date-secondary">{secondary}</span>
+      </div>
       {activities.map((activity) => {
-        const value = dayScores[activity.id] ?? 0;
+        if (activity.kind === 'text') {
+          const raw = dayScores[activity.id];
+          const value = typeof raw === 'string' ? raw : '';
+          const isEditing = editingCell?.dateStr === dateStr && editingCell.activityId === activity.id;
+          if (isEditing) {
+            return (
+              <TextCellInput
+                key={activity.id}
+                initialValue={value}
+                onCommit={(next) => onCommitText(dateStr, activity, next)}
+                onCancel={onCancelEdit}
+              />
+            );
+          }
+          return (
+            <button
+              key={activity.id}
+              type="button"
+              className={`cell score-cell text ${value ? 'has-value' : ''}`}
+              onClick={() => onStartEdit(activity.id)}
+              aria-label={`${activity.name} on ${dateStr}, current note ${value || '(none)'}`}
+            >
+              {value}
+            </button>
+          );
+        }
+
+        const raw = dayScores[activity.id];
+        const value = typeof raw === 'number' ? raw : 0;
         return (
           <button
             key={activity.id}
@@ -120,10 +175,36 @@ function Row({ dateStr, activities, dayScores, onTap }: RowProps) {
           </button>
         );
       })}
-      <div className={`cell total-cell ${total > 0 ? 'positive' : total < 0 ? 'negative' : ''}`}>
-        {total !== 0 ? total.toFixed(1) : ''}
-      </div>
       <div className="cell filler-cell" />
     </>
+  );
+}
+
+interface TextCellInputProps {
+  initialValue: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}
+
+function TextCellInput({ initialValue, onCommit, onCancel }: TextCellInputProps) {
+  const [value, setValue] = useState(initialValue);
+
+  return (
+    <input
+      autoFocus
+      className="cell text-cell-input"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => onCommit(value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onCommit(value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+    />
   );
 }

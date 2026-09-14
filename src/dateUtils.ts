@@ -26,14 +26,16 @@ export function dateRange(start: string, end: string): string[] {
   return dates;
 }
 
-export function formatDisplayDate(dateStr: string): string {
+// Two-line date display: a big primary label (weekday, or Today/Yesterday)
+// and a smaller secondary label (the actual month/day) underneath it.
+export function formatDisplayDateParts(dateStr: string): { primary: string; secondary: string } {
   const today = todayStr();
-  if (dateStr === today) return 'Today';
-  if (dateStr === addDays(today, -1)) return 'Yesterday';
   const d = new Date(`${dateStr}T00:00:00`);
-  return d.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
+  const secondary = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+  if (dateStr === today) return { primary: 'Today', secondary };
+  if (dateStr === addDays(today, -1)) return { primary: 'Yesterday', secondary };
+
+  const primary = d.toLocaleDateString(undefined, { weekday: 'short' });
+  return { primary, secondary };
 }

@@ -10,28 +10,40 @@ function round(n: number): number {
 }
 
 export default function StatsPanel({ activities, days }: StatsPanelProps) {
-  const sums = activities.map((activity) => {
+  const numericActivities = activities.filter((a) => a.kind !== 'text');
+
+  const stats = numericActivities.map((activity) => {
     let sum = 0;
+    let count = 0;
     for (const dateStr in days) {
-      sum += days[dateStr][activity.id] ?? 0;
+      const value = days[dateStr][activity.id];
+      if (typeof value === 'number') {
+        sum += value;
+        count += 1;
+      }
     }
-    return { activity, sum: round(sum) };
+    const averaged = activity.kind === 'numeric-average';
+    const value = averaged ? (count > 0 ? sum / count : 0) : sum;
+    return { activity, value: round(value), averaged };
   });
-  const grandTotal = round(sums.reduce((acc, s) => acc + s.sum, 0));
+  const grandTotal = round(stats.filter((s) => !s.averaged).reduce((acc, s) => acc + s.value, 0));
 
   return (
     <div className="stats-panel">
       <div className="stats-tiles">
-        {sums.map(({ activity, sum }) => (
-          <div key={activity.id} className="stat-tile">
-            <span className="stat-tile-label">{activity.name}</span>
-            <span className="stat-tile-value">{sum.toFixed(1)}</span>
+        {stats.map(({ activity, value, averaged }) => (
+          <div key={activity.id} className="stat-box">
+            <span className="stat-box-label">
+              {activity.name}
+              {averaged ? ' · avg' : ''}
+            </span>
+            <span className="stat-box-value">{value.toFixed(1)}</span>
           </div>
         ))}
-      </div>
-      <div className="stats-grand-total">
-        <span className="grand-total-label">Total</span>
-        <span className="grand-total-value">{grandTotal.toFixed(1)}</span>
+        <div className="stat-box stat-box-total">
+          <span className="stat-box-label">Total</span>
+          <span className="stat-box-value">{grandTotal.toFixed(1)}</span>
+        </div>
       </div>
     </div>
   );

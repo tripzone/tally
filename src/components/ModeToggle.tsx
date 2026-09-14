@@ -12,15 +12,17 @@ export default function ModeToggle({ mode, onChange }: ModeToggleProps) {
         type="button"
         className={`mode-btn add ${mode === 'add' ? 'active' : ''}`}
         onClick={() => onChange('add')}
+        aria-label="Add mode"
       >
-        + Add
+        +
       </button>
       <button
         type="button"
         className={`mode-btn remove ${mode === 'remove' ? 'active' : ''}`}
         onClick={() => onChange('remove')}
+        aria-label="Remove mode"
       >
-        − Remove
+        −
       </button>
     </div>
   );

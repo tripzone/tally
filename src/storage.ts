@@ -9,9 +9,9 @@ import type { Activity, DayScores, DaysMap } from './types';
 
 function defaultActivities(): Activity[] {
   return [
-    { id: crypto.randomUUID(), name: 'Gym', type: 'positive' },
-    { id: crypto.randomUUID(), name: 'Music', type: 'positive' },
-    { id: crypto.randomUUID(), name: 'Smoking', type: 'negative' },
+    { id: crypto.randomUUID(), name: 'Gym', kind: 'numeric-total', type: 'positive' },
+    { id: crypto.randomUUID(), name: 'Music', kind: 'numeric-total', type: 'positive' },
+    { id: crypto.randomUUID(), name: 'Smoking', kind: 'numeric-total', type: 'negative' },
   ];
 }
 
