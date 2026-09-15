@@ -3,6 +3,7 @@ import './App.css';
 import type { Activity, ActivityType, DayScores, DaysMap, TapMode } from './types';
 import { loadUserData, saveActivities, saveTotalGoal, loadDays, saveDayScores } from './storage';
 import { addDays, dateRange, todayStr } from './dateUtils';
+import { applyTheme, getStoredTheme, type ThemePref } from './theme';
 import ScoreGrid from './components/ScoreGrid';
 import AddActivityModal from './components/AddActivityModal';
 import ColumnSettingsModal from './components/ColumnSettingsModal';
@@ -63,6 +64,12 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [theme, setTheme] = useState<ThemePref>(() => getStoredTheme());
+
+  function handleThemeChange(next: ThemePref) {
+    setTheme(next);
+    applyTheme(next);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -233,6 +240,8 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
           onReorder={handleReorderActivities}
           onUpdate={handleUpdateActivity}
           onDelete={handleDeleteActivity}
+          theme={theme}
+          onThemeChange={handleThemeChange}
         />
       )}
 

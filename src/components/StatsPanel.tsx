@@ -60,7 +60,7 @@ export default function StatsPanel({
   // modal, even for metrics that don't have a card below.
   const navOrder: (string | 'total')[] = [...allNumberActivities.map((a) => a.id), 'total'];
 
-  const stats = numericActivities.map((activity) => {
+  function computeActivityValue(activity: Activity): number {
     let sum = 0;
     let count = 0;
     for (const dateStr in days) {
@@ -70,24 +70,21 @@ export default function StatsPanel({
         count += 1;
       }
     }
-    const value = activity.statMode === 'average' ? (count > 0 ? sum / count : 0) : sum;
-    return { activity, value: round(value) };
-  });
+    return activity.statMode === 'average' ? (count > 0 ? sum / count : 0) : sum;
+  }
 
-  const grandTotal = round(
-    contributingActivities.reduce((acc, activity) => {
-      let sum = 0;
-      let count = 0;
-      for (const dateStr in days) {
-        const value = days[dateStr][activity.id];
-        if (typeof value === 'number') {
-          sum += value;
-          count += 1;
-        }
-      }
-      return acc + (activity.statMode === 'average' ? (count > 0 ? sum / count : 0) : sum);
-    }, 0)
+  const stats = numericActivities.map((activity) => ({ activity, value: round(computeActivityValue(activity)) }));
+
+  // Negative-type values are stored as negative numbers, so summing
+  // everything together already nets positive minus negative -- split by
+  // type here just to show the "positive - negative = total" breakdown.
+  const positiveTotal = round(
+    contributingActivities.filter((a) => a.type !== 'negative').reduce((acc, a) => acc + computeActivityValue(a), 0)
   );
+  const negativeTotal = round(
+    contributingActivities.filter((a) => a.type === 'negative').reduce((acc, a) => acc + computeActivityValue(a), 0)
+  );
+  const grandTotal = round(positiveTotal + negativeTotal);
   const totalPercent = goalPercent(grandTotal, totalGoal);
 
   function activityDailyValues(activity: Activity): Record<string, number> {
@@ -144,6 +141,9 @@ export default function StatsPanel({
       <button type="button" className="total-block" onClick={() => setSelected('total')}>
         <span className="total-block-label">Total</span>
         <span className="total-block-value">{grandTotal.toFixed(1)}</span>
+        <span className="total-block-formula">
+          {positiveTotal.toFixed(1)} − {Math.abs(negativeTotal).toFixed(1)}
+        </span>
         {totalPercent !== null && <span className="total-block-goal">{totalPercent}% of goal</span>}
         <DeviationLabel percent={totalPercent} />
       </button>

@@ -331,9 +331,18 @@
 }
 
 .score-cell.negative.has-value {
-  background: var(--border);
+  background: var(--surface-2);
   color: var(--text);
   font-style: italic;
+}
+
+/* Columns that don't count toward the total (e.g. Mood) read as more
+   grey/subdued than columns that do, so the total's inputs stand out --
+   no fill at all, same as a cell with nothing entered. */
+.score-cell.muted-column.has-value {
+  background: transparent;
+  color: var(--text-muted);
+  font-style: normal;
 }
 
 .score-cell.text {
@@ -427,6 +436,35 @@
 .field input:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
+}
+
+.theme-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-toggle-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.theme-toggle-btn.light {
+  color: #d97706;
+  border-color: #d97706;
+  background: rgba(217, 119, 6, 0.1);
+}
+
+.theme-toggle-btn:active {
+  background: var(--border);
 }
 
 .type-choice {
@@ -948,6 +986,13 @@
   font-size: 34px;
   font-weight: 800;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.total-block-formula {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 

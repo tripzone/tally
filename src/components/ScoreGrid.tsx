@@ -171,7 +171,9 @@ function Row({
           <button
             key={activity.id}
             type="button"
-            className={`cell score-cell ${activity.type} ${value !== 0 ? 'has-value' : ''}`}
+            className={`cell score-cell ${activity.type} ${value !== 0 ? 'has-value' : ''} ${
+              activity.contributeToTotal === false ? 'muted-column' : ''
+            }`}
             onClick={() => onTap(dateStr, activity)}
             aria-label={`${activity.name} on ${dateStr}, current value ${value}`}
           >

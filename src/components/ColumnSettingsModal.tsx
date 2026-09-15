@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Activity } from '../types';
+import type { ThemePref } from '../theme';
 
 const ROW_HEIGHT = 52;
 // Shared "shown in metrics" glyph -- reused on the column row, the edit
@@ -7,12 +8,36 @@ const ROW_HEIGHT = 52;
 // same symbol always means the same thing across the app.
 const METRICS_ICON = '▥';
 
+// A sun for light/day mode, a moon for dark/night mode -- toggling it
+// switches the theme.
+function ThemeIcon({ on }: { on: boolean }) {
+  if (on) {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="4.5" fill="currentColor" fillOpacity="0.2" />
+        <path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.55 1.55M18.25 18.25l1.55 1.55M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.55-1.55M18.25 5.75l1.55-1.55" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path
+        d="M20.5 14.8A8.5 8.5 0 1 1 9.2 3.5a7 7 0 0 0 11.3 11.3Z"
+        fill="currentColor"
+        fillOpacity="0.15"
+      />
+    </svg>
+  );
+}
+
 interface ColumnSettingsModalProps {
   activities: Activity[];
   onCancel: () => void;
   onReorder: (next: Activity[]) => void;
   onUpdate: (id: string, updates: Partial<Omit<Activity, 'id'>>) => void;
   onDelete: (id: string) => void;
+  theme: ThemePref;
+  onThemeChange: (theme: ThemePref) => void;
 }
 
 export default function ColumnSettingsModal({
@@ -21,6 +46,8 @@ export default function ColumnSettingsModal({
   onReorder,
   onUpdate,
   onDelete,
+  theme,
+  onThemeChange,
 }: ColumnSettingsModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [order, setOrder] = useState<string[]>(() => activities.map((a) => a.id));
@@ -100,6 +127,18 @@ export default function ColumnSettingsModal({
             <p className="settings-hint">
               Drag ≡ to reorder · {METRICS_ICON} = shown in metrics · Σ = counts toward total · ✎ to edit
             </p>
+            <div className="field theme-field">
+              <span>Theme</span>
+              <button
+                type="button"
+                className={`theme-toggle-btn ${theme}`}
+                onClick={() => onThemeChange(theme === 'light' ? 'dark' : 'light')}
+                aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+                title={theme === 'light' ? 'Light mode -- tap for dark' : 'Dark mode -- tap for light'}
+              >
+                <ThemeIcon on={theme === 'light'} />
+              </button>
+            </div>
             <div className="settings-list">
               {order.map((id) => {
                 const activity = byId.get(id);
