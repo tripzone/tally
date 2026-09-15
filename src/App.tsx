@@ -6,6 +6,7 @@ import { addDays, dateRange, todayStr } from './dateUtils';
 import ScoreGrid from './components/ScoreGrid';
 import AddActivityModal from './components/AddActivityModal';
 import ColumnSettingsModal from './components/ColumnSettingsModal';
+import ExportModal from './components/ExportModal';
 import StatsPanel from './components/StatsPanel';
 import SignIn from './components/SignIn';
 import { useAuth } from './hooks/useAuth';
@@ -61,6 +62,7 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
   const [oldestDate, setOldestDate] = useState(() => addDays(todayStr(), -INITIAL_DAYS_BACK));
   const [showAddForm, setShowAddForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +149,14 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
     saveTotalGoal(uid, goal).catch((err) => console.error('Failed to save total goal', err));
   }
 
+  function handleDeleteActivity(id: string) {
+    setActivities((prev) => {
+      const next = prev.filter((a) => a.id !== id);
+      saveActivities(uid, next).catch((err) => console.error('Failed to save activity', err));
+      return next;
+    });
+  }
+
   if (dataLoading) {
     return (
       <div className="splash">
@@ -160,6 +170,27 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
       <header className="app-header">
         <h1>Tally</h1>
         <div className="header-actions">
+          <button
+            type="button"
+            className="gear-btn"
+            onClick={() => setShowExport(true)}
+            aria-label="Export data"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3v12" />
+              <path d="M7 10l5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
+          </button>
           <button
             type="button"
             className="gear-btn"
@@ -201,7 +232,12 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
           onCancel={() => setShowSettings(false)}
           onReorder={handleReorderActivities}
           onUpdate={handleUpdateActivity}
+          onDelete={handleDeleteActivity}
         />
+      )}
+
+      {showExport && (
+        <ExportModal activities={activities} days={days} onClose={() => setShowExport(false)} />
       )}
 
       {showAddForm && (

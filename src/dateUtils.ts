@@ -35,7 +35,7 @@ export function weekStart(dateStr: string): string {
   return toDateStr(d);
 }
 
-// Two-line date display: a big primary label (weekday, or Today/Yesterday)
+// Two-line date display: a big primary label (weekday, or Today)
 // and a smaller secondary label (the actual month/day) underneath it.
 export function formatDisplayDateParts(dateStr: string): { primary: string; secondary: string } {
   const today = todayStr();
@@ -43,8 +43,28 @@ export function formatDisplayDateParts(dateStr: string): { primary: string; seco
   const secondary = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
   if (dateStr === today) return { primary: 'Today', secondary };
-  if (dateStr === addDays(today, -1)) return { primary: 'Yesterday', secondary };
 
   const primary = d.toLocaleDateString(undefined, { weekday: 'short' });
   return { primary, secondary };
+}
+
+// 1-indexed day number within the calendar year (Jan 1 -> 1).
+export function dayOfYear(dateStr: string): number {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const start = new Date(d.getFullYear(), 0, 1);
+  return Math.round((d.getTime() - start.getTime()) / 86400000) + 1;
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+export function daysInYear(year: number): number {
+  return isLeapYear(year) ? 366 : 365;
+}
+
+// Fraction (0-1) of the calendar year that has elapsed as of `dateStr`.
+export function yearProgress(dateStr: string = todayStr()): number {
+  const year = new Date(`${dateStr}T00:00:00`).getFullYear();
+  return dayOfYear(dateStr) / daysInYear(year);
 }

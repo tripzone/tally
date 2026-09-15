@@ -2,12 +2,17 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import type { Activity } from '../types';
 
 const ROW_HEIGHT = 52;
+// Shared "shown in metrics" glyph -- reused on the column row, the edit
+// panel, and (via the same className convention) the metric cards, so the
+// same symbol always means the same thing across the app.
+const METRICS_ICON = '▥';
 
 interface ColumnSettingsModalProps {
   activities: Activity[];
   onCancel: () => void;
   onReorder: (next: Activity[]) => void;
   onUpdate: (id: string, updates: Partial<Omit<Activity, 'id'>>) => void;
+  onDelete: (id: string) => void;
 }
 
 export default function ColumnSettingsModal({
@@ -15,6 +20,7 @@ export default function ColumnSettingsModal({
   onCancel,
   onReorder,
   onUpdate,
+  onDelete,
 }: ColumnSettingsModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [order, setOrder] = useState<string[]>(() => activities.map((a) => a.id));
@@ -79,12 +85,20 @@ export default function ColumnSettingsModal({
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
         {editingActivity ? (
-          <ActivityEditPanel activity={editingActivity} onBack={() => setEditingId(null)} onUpdate={onUpdate} />
+          <ActivityEditPanel
+            activity={editingActivity}
+            onBack={() => setEditingId(null)}
+            onUpdate={onUpdate}
+            onDelete={(id) => {
+              onDelete(id);
+              setEditingId(null);
+            }}
+          />
         ) : (
           <>
-            <h2>Columns</h2>
+            <h2 />
             <p className="settings-hint">
-              Drag ≡ to reorder · M = shown in metrics · Σ = counts toward total · ✎ to edit
+              Drag ≡ to reorder · {METRICS_ICON} = shown in metrics · Σ = counts toward total · ✎ to edit
             </p>
             <div className="settings-list">
               {order.map((id) => {
@@ -138,7 +152,6 @@ function ColumnRow({ activity, isDragging, onPointerDown, onEdit, onUpdate }: Co
         ≡
       </button>
       <span className="settings-list-name">{activity.name}</span>
-      <span className="settings-list-kind">{isText ? 'Text' : activity.type === 'negative' ? '−' : '+'}</span>
       {!isText && (
         <>
           <button
@@ -148,7 +161,7 @@ function ColumnRow({ activity, isDragging, onPointerDown, onEdit, onUpdate }: Co
             aria-label={shown ? `Hide ${activity.name} from metrics` : `Show ${activity.name} in metrics`}
             title={shown ? 'Shown in metrics' : 'Hidden from metrics'}
           >
-            M
+            {METRICS_ICON}
           </button>
           <button
             type="button"
@@ -161,6 +174,7 @@ function ColumnRow({ activity, isDragging, onPointerDown, onEdit, onUpdate }: Co
           </button>
         </>
       )}
+      <span className="settings-list-kind">{isText ? 'Text' : activity.type === 'negative' ? '−' : '+'}</span>
       <button
         type="button"
         className="edit-btn"
@@ -177,11 +191,15 @@ interface ActivityEditPanelProps {
   activity: Activity;
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<Omit<Activity, 'id'>>) => void;
+  onDelete: (id: string) => void;
 }
 
-function ActivityEditPanel({ activity, onBack, onUpdate }: ActivityEditPanelProps) {
+function ActivityEditPanel({ activity, onBack, onUpdate, onDelete }: ActivityEditPanelProps) {
   const [name, setName] = useState(activity.name);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isText = activity.kind === 'text';
+  const shown = activity.showInMetrics !== false;
+  const inTotal = activity.contributeToTotal !== false;
 
   function commitName() {
     const trimmed = name.trim();
@@ -236,6 +254,26 @@ function ActivityEditPanel({ activity, onBack, onUpdate }: ActivityEditPanelProp
       {!isText && (
         <>
           <div className="field">
+            <span>Included in</span>
+            <div className="type-choice">
+              <button
+                type="button"
+                className={`type-btn positive ${shown ? 'active' : ''}`}
+                onClick={() => onUpdate(activity.id, { showInMetrics: !shown })}
+              >
+                {METRICS_ICON} Metrics
+              </button>
+              <button
+                type="button"
+                className={`type-btn positive ${inTotal ? 'active' : ''}`}
+                onClick={() => onUpdate(activity.id, { contributeToTotal: !inTotal })}
+              >
+                Σ Total
+              </button>
+            </div>
+          </div>
+
+          <div className="field">
             <span>Direction</span>
             <div className="type-choice">
               <button
@@ -276,6 +314,26 @@ function ActivityEditPanel({ activity, onBack, onUpdate }: ActivityEditPanelProp
           </div>
         </>
       )}
+
+      <div className="danger-zone">
+        {confirmingDelete ? (
+          <>
+            <p className="delete-confirm-text">Delete "{activity.name}"? This can't be undone.</p>
+            <div className="type-choice">
+              <button type="button" className="type-btn" onClick={() => setConfirmingDelete(false)}>
+                Cancel
+              </button>
+              <button type="button" className="type-btn negative active" onClick={() => onDelete(activity.id)}>
+                Delete
+              </button>
+            </div>
+          </>
+        ) : (
+          <button type="button" className="delete-column-btn" onClick={() => setConfirmingDelete(true)}>
+            Delete column
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,3 +1,10 @@
+:root {
+  --row-h-header: 110px;
+  --row-h-today: 72px;
+  --row-h-yesterday: 60px;
+  --row-h-normal: 44px;
+}
+
 .app {
   display: flex;
   flex-direction: column;
@@ -35,6 +42,10 @@
   color: var(--text-muted);
   padding: 6px 8px;
   border-radius: 6px;
+}
+
+.gear-btn svg {
+  display: block;
 }
 
 .gear-btn:active {
@@ -170,8 +181,10 @@
 /* Grid */
 
 .grid-wrap {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
+  /* Header + today's row + yesterday's row + 2 regular rows = 4 visible rows. */
+  height: calc(var(--row-h-header) + var(--row-h-today) + var(--row-h-yesterday) + 2 * var(--row-h-normal));
 }
 
 .grid-scroll {
@@ -182,8 +195,8 @@
 
 .grid {
   display: grid;
-  grid-template-rows: 110px;
-  grid-auto-rows: minmax(44px, auto);
+  grid-template-rows: var(--row-h-header);
+  grid-auto-rows: minmax(var(--row-h-normal), auto);
   width: 100%;
   min-width: max-content;
 }
@@ -284,7 +297,7 @@
 }
 
 .date-cell.row-today {
-  height: 72px;
+  height: var(--row-h-today);
 }
 
 .date-cell.row-today .date-primary {
@@ -292,7 +305,7 @@
 }
 
 .date-cell.row-yesterday {
-  height: 60px;
+  height: var(--row-h-yesterday);
 }
 
 .date-cell.row-yesterday .date-primary {
@@ -499,6 +512,23 @@
   touch-action: pan-y;
 }
 
+.export-year-row {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+
+.export-year-row:active {
+  background: var(--surface-2);
+}
+
 .settings-list-row {
   display: flex;
   align-items: center;
@@ -611,6 +641,33 @@
   padding: 4px 0;
 }
 
+.danger-zone {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.delete-column-btn {
+  padding: 10px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--negative);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--negative);
+}
+
+.delete-column-btn:active {
+  background: var(--negative-bg);
+}
+
+.delete-confirm-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
 .settings-name-input {
   flex: 1;
   min-width: 0;
@@ -627,6 +684,39 @@
 
 .metric-detail-modal {
   max-height: 84vh;
+}
+
+.metric-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.metric-nav-header h2 {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-nav-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  border-radius: 8px;
+}
+
+.metric-nav-btn:active {
+  background: var(--surface-2);
 }
 
 .goal-row {
@@ -686,6 +776,23 @@
   fill: var(--accent);
   font-size: 8px;
   font-weight: 700;
+}
+
+.chart-pace-line {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
+  opacity: 0.8;
+}
+
+.chart-pace-dot {
+  fill: var(--surface);
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.chart-pace-hint {
+  margin: -10px 0 0;
 }
 
 .chart-line {
@@ -793,6 +900,20 @@
   font-weight: 600;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
+}
+
+.stat-deviation {
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-deviation.ahead {
+  color: var(--positive);
+}
+
+.stat-deviation.behind {
+  color: var(--negative);
 }
 
 .total-block {
