@@ -10,6 +10,7 @@ import ColumnSettingsModal from './components/ColumnSettingsModal';
 import ExportModal from './components/ExportModal';
 import StatsPanel from './components/StatsPanel';
 import SignIn from './components/SignIn';
+import InstallPrompt from './components/InstallPrompt';
 import { useAuth } from './hooks/useAuth';
 
 const INITIAL_DAYS_BACK = 60;
@@ -42,10 +43,20 @@ export default function App() {
   }
 
   if (!user) {
-    return <SignIn onSignIn={signInWithGoogle} />;
+    return (
+      <>
+        <SignIn onSignIn={signInWithGoogle} />
+        <InstallPrompt />
+      </>
+    );
   }
 
-  return <Board uid={user.uid} displayName={user.displayName} onSignOut={signOutUser} />;
+  return (
+    <>
+      <Board uid={user.uid} displayName={user.displayName} onSignOut={signOutUser} />
+      <InstallPrompt />
+    </>
+  );
 }
 
 interface BoardProps {
