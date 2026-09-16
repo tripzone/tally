@@ -1,9 +1,0 @@
-.git
-node_modules
-dist
-.DS_Store
-*.log
-
-# .env.local is intentionally NOT excluded here -- vite build needs it
-# during the Cloud Build image build to bake in the Firebase config.
-# It's still gitignored (see .gitignore) so it never lands in git/GitHub.
