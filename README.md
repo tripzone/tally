@@ -1,32 +1,48 @@
-# React + TypeScript + Vite
+# Tally
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A daily habit tracker: log activities per day, track running totals against
+annual goals, and see trend charts over time. Built with React, TypeScript,
+and Vite, backed by Firebase (Auth + Firestore).
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+cp .env.local.example .env.local   # fill in with values from Firebase Console
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`.env.local` holds the Firebase Web SDK config (`VITE_FIREBASE_*`). These are
+public client identifiers, not secrets -- access is enforced by
+`firestore.rules`, not by keeping this file private. Get the values from
+[Firebase Console](https://console.firebase.google.com/project/tally-streaker/settings/general)
+-> Project Settings -> General -> Your apps -> Web app.
+
+## Deployment
+
+The app is a static SPA deployed to **Firebase Hosting** in the
+`tally-streaker` Firebase/GCP project. Auth and Firestore live in the same
+project. There is no server -- the client talks to Firestore directly.
+
+To deploy from any machine (this repo's `.firebaserc` already points at
+`tally-streaker`, so no extra linking is needed):
+
+```bash
+npm install
+npm run build                                    # outputs to dist/
+npx firebase-tools login                         # first time only, on a new machine
+npx firebase-tools deploy --only hosting --project tally-streaker
+```
+
+Live at https://tally-streaker.web.app (also served at
+https://tally-streaker.firebaseapp.com).
+
+If `firestore.rules` changes, deploy that separately:
+
+```bash
+npx firebase-tools deploy --only firestore:rules --project tally-streaker
+```
+
+Whoever deploys needs to be added as a member of the `tally-streaker`
+Firebase project (Firebase Console -> Project Settings -> Users and
+permissions) -- `firebase login` alone isn't enough without project access.
