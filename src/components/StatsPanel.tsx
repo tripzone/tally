@@ -23,20 +23,26 @@ function goalPercent(value: number, goal: number | null | undefined): number | n
   return Math.round((value / goal) * 100);
 }
 
-// How far ahead (positive) or behind (negative) `percent` (% of goal
-// reached) is compared to how far through the year we already are.
-function deviationFromGoal(percent: number | null): number | null {
-  if (percent === null) return null;
-  const yearPercent = Math.round(yearProgress() * 100);
-  return percent - yearPercent;
+// How far ahead (positive) or behind (negative) `value` is compared to a
+// straight-line pace toward `goal` by the end of the year -- both as a
+// percent-of-goal difference and as raw points (value vs. what the pace
+// line says you should have by now).
+function paceDeviation(value: number, goal: number | null | undefined): { percent: number; points: number } | null {
+  if (goal == null || goal === 0) return null;
+  const progress = yearProgress();
+  const percent = Math.round((value / goal) * 100) - Math.round(progress * 100);
+  const points = value - goal * progress;
+  return { percent, points };
 }
 
-function DeviationLabel({ percent }: { percent: number | null }) {
-  const deviation = deviationFromGoal(percent);
+function DeviationLabel({ value, goal }: { value: number; goal: number | null | undefined }) {
+  const deviation = paceDeviation(value, goal);
   if (deviation === null) return null;
+  const { percent, points } = deviation;
+  const pointsStr = points >= 0 ? `+${points.toFixed(1)}` : points.toFixed(1);
   return (
-    <span className={`stat-deviation ${deviation >= 0 ? 'ahead' : 'behind'}`}>
-      {deviation >= 0 ? `+${deviation}` : deviation}% vs pace
+    <span className={`stat-deviation ${percent >= 0 ? 'ahead' : 'behind'}`}>
+      {percent >= 0 ? `+${percent}` : percent}% ({pointsStr} pts) vs pace
     </span>
   );
 }
@@ -132,7 +138,7 @@ export default function StatsPanel({
               <span className="stat-box-label">{activity.name}</span>
               <span className="stat-box-value">{value.toFixed(1)}</span>
               {percent !== null && <span className="stat-box-goal">{percent}% of goal</span>}
-              <DeviationLabel percent={percent} />
+              <DeviationLabel value={value} goal={activity.goal} />
             </button>
           );
         })}
@@ -145,7 +151,7 @@ export default function StatsPanel({
           {positiveTotal.toFixed(1)} − {Math.abs(negativeTotal).toFixed(1)}
         </span>
         {totalPercent !== null && <span className="total-block-goal">{totalPercent}% of goal</span>}
-        <DeviationLabel percent={totalPercent} />
+        <DeviationLabel value={grandTotal} goal={totalGoal} />
       </button>
 
       {selected === 'total' && (

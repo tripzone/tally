@@ -927,6 +927,10 @@
   text-align: center;
 }
 
+.chart-tooltip-empty {
+  visibility: hidden;
+}
+
 .chart-tooltip strong {
   color: var(--text);
 }

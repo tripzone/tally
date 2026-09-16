@@ -250,11 +250,15 @@ export default function MetricDetailModal({
               </text>
             </svg>
 
-            {hovered && (
-              <div className="chart-tooltip">
-                Week of {formatWeekLabel(hovered.week)}: <strong>{hovered.value}</strong>
-              </div>
-            )}
+            <div className={`chart-tooltip ${hovered ? '' : 'chart-tooltip-empty'}`}>
+              {hovered ? (
+                <>
+                  Week of {formatWeekLabel(hovered.week)}: <strong>{hovered.value}</strong>
+                </>
+              ) : (
+                ' '
+              )}
+            </div>
           </div>
         )}
 
