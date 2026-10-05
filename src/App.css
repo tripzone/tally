@@ -3,6 +3,7 @@
   --row-h-today: 72px;
   --row-h-yesterday: 60px;
   --row-h-normal: 44px;
+  --grid-expand-h: 26px;
 }
 
 .app {
@@ -242,14 +243,55 @@
 .grid-wrap {
   flex: 0 1 auto;
   min-height: 0;
-  /* Header + today's row + yesterday's row + 2 regular rows = 4 visible rows. */
-  height: calc(var(--row-h-header) + var(--row-h-today) + var(--row-h-yesterday) + 2 * var(--row-h-normal));
+  display: flex;
+  flex-direction: column;
+  /* Collapsed: the sticky header plus today's and yesterday's rows. */
+  height: calc(
+    var(--row-h-header) + var(--row-h-today) + var(--row-h-yesterday) + var(--grid-expand-h)
+  );
+}
+
+.grid-wrap.expanded {
+  /* Five more days on top of today and yesterday, capped so the stats
+     panel below still gets room on short screens. */
+  height: calc(
+    var(--row-h-header) + var(--row-h-today) + var(--row-h-yesterday) + 5 * var(--row-h-normal) +
+      var(--grid-expand-h)
+  );
+  max-height: 60dvh;
 }
 
 .grid-scroll {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.grid-expand-btn {
+  flex-shrink: 0;
+  height: var(--grid-expand-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.grid-expand-btn:active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.grid-expand-btn svg {
+  display: block;
+  transition: transform 0.15s ease;
+}
+
+.grid-wrap.expanded .grid-expand-btn svg {
+  transform: rotate(180deg);
 }
 
 .grid {
@@ -814,6 +856,16 @@
 
 .metric-nav-btn:active {
   background: var(--surface-2);
+}
+
+.chart-mode-choice {
+  display: flex;
+  gap: 8px;
+}
+
+.chart-mode-choice .type-btn {
+  padding: 7px 8px;
+  font-size: 12px;
 }
 
 .goal-row {

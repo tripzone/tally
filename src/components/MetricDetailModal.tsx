@@ -12,6 +12,9 @@ interface MetricDetailModalProps {
 }
 
 const SWIPE_THRESHOLD = 40;
+const WEEKS_IN_YEAR = 52;
+
+type ChartMode = 'weekly' | 'cumulative';
 
 interface WeekPoint {
   week: string; // Monday date, YYYY-MM-DD
@@ -22,7 +25,11 @@ function round(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function computeWeeklySeries(dailyValues: Record<string, number>, statMode: 'sum' | 'average'): WeekPoint[] {
+function computeWeeklySeries(
+  dailyValues: Record<string, number>,
+  statMode: 'sum' | 'average',
+  chartMode: ChartMode
+): WeekPoint[] {
   const dates = Object.keys(dailyValues).sort();
   if (dates.length === 0) return [];
 
@@ -42,8 +49,9 @@ function computeWeeklySeries(dailyValues: Record<string, number>, statMode: 'sum
     const { sum, count } = weekTotals.get(ws)!;
     cumSum += sum;
     cumCount += count;
-    const value = statMode === 'average' ? (cumCount > 0 ? cumSum / cumCount : 0) : cumSum;
-    return { week: ws, value: round(value) };
+    const weekly = statMode === 'average' ? (count > 0 ? sum / count : 0) : sum;
+    const cumulative = statMode === 'average' ? (cumCount > 0 ? cumSum / cumCount : 0) : cumSum;
+    return { week: ws, value: round(chartMode === 'weekly' ? weekly : cumulative) };
   });
 }
 
@@ -65,7 +73,11 @@ export default function MetricDetailModal({
   onClose,
   onNavigate,
 }: MetricDetailModalProps) {
-  const series = useMemo(() => computeWeeklySeries(dailyValues, statMode), [dailyValues, statMode]);
+  const [chartMode, setChartMode] = useState<ChartMode>('weekly');
+  const series = useMemo(
+    () => computeWeeklySeries(dailyValues, statMode, chartMode),
+    [dailyValues, statMode, chartMode]
+  );
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [goalInput, setGoalInput] = useState(goal != null ? String(goal) : '');
   const touchStartX = useRef<number | null>(null);
@@ -108,8 +120,14 @@ export default function MetricDetailModal({
     if (!Number.isNaN(num) && num !== goal) onUpdateGoal(num);
   }
 
+  const isCumulative = chartMode === 'cumulative';
+  // A summed goal is annual, so in weekly mode it becomes a per-week
+  // target. An averaged goal is already comparable to a weekly average.
+  const goalLine =
+    goal == null ? null : isCumulative || statMode === 'average' ? goal : round(goal / WEEKS_IN_YEAR);
+
   const values = series.map((p) => p.value);
-  const allValues = goal != null ? [...values, goal] : values;
+  const allValues = goalLine != null ? [...values, goalLine] : values;
   const minY = Math.min(0, ...allValues);
   const maxY = Math.max(...allValues, 0.1);
   const spanY = maxY - minY || 1;
@@ -137,11 +155,11 @@ export default function MetricDetailModal({
   const lastPoint = series[series.length - 1];
   const hovered = hoverIndex != null ? series[hoverIndex] : null;
 
-  const paceToday = goal != null ? goal * yearProgress(today) : null;
+  // The sloped pace line only makes sense against a cumulative total --
+  // in weekly mode the equivalent target is the flat per-week goal line.
+  const paceToday = isCumulative && goal != null ? goal * yearProgress(today) : null;
   const paceLinePath =
-    goal != null && paceToday != null
-      ? `M ${xAt(`${referenceYear}-01-01`)} ${yAt(0)} L ${xAt(today)} ${yAt(paceToday)}`
-      : null;
+    paceToday != null ? `M ${xAt(`${referenceYear}-01-01`)} ${yAt(0)} L ${xAt(today)} ${yAt(paceToday)}` : null;
 
   function handlePointerMove(e: ReactPointerEvent<SVGSVGElement>) {
     if (series.length === 0) return;
@@ -176,10 +194,31 @@ export default function MetricDetailModal({
             ›
           </button>
         </div>
-        <p className="settings-hint">Cumulative {statMode === 'average' ? 'average' : 'total'} by week</p>
-        {goal != null && (
+        <p className="settings-hint">
+          {isCumulative
+            ? `Cumulative ${statMode === 'average' ? 'average' : 'total'} by week`
+            : `Weekly ${statMode === 'average' ? 'average' : 'total'}`}
+        </p>
+        {isCumulative && goal != null && (
           <p className="settings-hint chart-pace-hint">Dotted line = pace to reach the goal by Dec 31</p>
         )}
+
+        <div className="chart-mode-choice">
+          <button
+            type="button"
+            className={`type-btn ${!isCumulative ? 'active' : ''}`}
+            onClick={() => setChartMode('weekly')}
+          >
+            Weekly
+          </button>
+          <button
+            type="button"
+            className={`type-btn ${isCumulative ? 'active' : ''}`}
+            onClick={() => setChartMode('cumulative')}
+          >
+            Cumulative
+          </button>
+        </div>
 
         {series.length === 0 ? (
           <p className="metric-chart-empty">No data yet.</p>
@@ -193,17 +232,17 @@ export default function MetricDetailModal({
             >
               <line x1={PAD.left} y1={yAt(0)} x2={CHART_WIDTH - PAD.right} y2={yAt(0)} className="chart-baseline" />
 
-              {goal != null && (
+              {goalLine != null && (
                 <>
                   <line
                     x1={PAD.left}
-                    y1={yAt(goal)}
+                    y1={yAt(goalLine)}
                     x2={CHART_WIDTH - PAD.right}
-                    y2={yAt(goal)}
+                    y2={yAt(goalLine)}
                     className="chart-goal-line"
                   />
-                  <text x={CHART_WIDTH - PAD.right} y={yAt(goal) - 4} className="chart-goal-label" textAnchor="end">
-                    Goal {goal}
+                  <text x={CHART_WIDTH - PAD.right} y={yAt(goalLine) - 4} className="chart-goal-label" textAnchor="end">
+                    {isCumulative ? `Goal ${goalLine}` : `Goal/wk ${goalLine}`}
                   </text>
                 </>
               )}

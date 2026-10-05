@@ -28,6 +28,9 @@ export default function ScoreGrid({
   const pendingAdjustRef = useRef<number | null>(null);
   const hasScrolledToBottomRef = useRef(false);
   const [editingCell, setEditingCell] = useState<{ dateStr: string; activityId: string } | null>(null);
+  // Collapsed shows just today and yesterday; expanding reveals more days
+  // at once. Either way the grid still scrolls back through older days.
+  const [expanded, setExpanded] = useState(false);
 
   // Land on today's row on first load.
   useEffect(() => {
@@ -63,7 +66,7 @@ export default function ScoreGrid({
   }
 
   return (
-    <div className="grid-wrap">
+    <div className={`grid-wrap ${expanded ? 'expanded' : ''}`}>
       <div className="grid-scroll" ref={scrollRef} onScroll={handleScroll}>
         <div className="grid" style={{ gridTemplateColumns: gridTemplateColumns(activities) }}>
           <div className="cell header-cell corner-cell">Day</div>
@@ -99,6 +102,27 @@ export default function ScoreGrid({
           ))}
         </div>
       </div>
+
+      <button
+        type="button"
+        className="grid-expand-btn"
+        onClick={() => setExpanded((prev) => !prev)}
+        aria-expanded={expanded}
+        aria-label={expanded ? 'Show fewer days' : 'Show more days'}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
     </div>
   );
 }
