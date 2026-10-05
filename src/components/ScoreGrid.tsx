@@ -11,6 +11,8 @@ interface ScoreGridProps {
   onTextChange: (dateStr: string, activity: Activity, value: string) => void;
   onLoadMore: () => void;
   onRequestAddActivity: () => void;
+  expanded: boolean;
+  onToggleExpand: () => void;
 }
 
 const SCROLL_THRESHOLD = 120;
@@ -23,14 +25,13 @@ export default function ScoreGrid({
   onTextChange,
   onLoadMore,
   onRequestAddActivity,
+  expanded,
+  onToggleExpand,
 }: ScoreGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pendingAdjustRef = useRef<number | null>(null);
   const hasScrolledToBottomRef = useRef(false);
   const [editingCell, setEditingCell] = useState<{ dateStr: string; activityId: string } | null>(null);
-  // Collapsed shows just today and yesterday; expanding reveals more days
-  // at once. Either way the grid still scrolls back through older days.
-  const [expanded, setExpanded] = useState(false);
 
   // Land on today's row on first load.
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function ScoreGrid({
       <button
         type="button"
         className="grid-expand-btn"
-        onClick={() => setExpanded((prev) => !prev)}
+        onClick={onToggleExpand}
         aria-expanded={expanded}
         aria-label={expanded ? 'Show fewer days' : 'Show more days'}
       >

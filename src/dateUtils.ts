@@ -35,6 +35,18 @@ export function weekStart(dateStr: string): string {
   return toDateStr(d);
 }
 
+// The first day of the calendar month containing `dateStr`.
+export function monthStart(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return toDateStr(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+
+// The last day of the calendar month containing `dateStr`.
+export function monthEnd(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return toDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+}
+
 // Two-line date display: a big primary label (weekday, or Today)
 // and a smaller secondary label (the actual month/day) underneath it.
 export function formatDisplayDateParts(dateStr: string): { primary: string; secondary: string } {

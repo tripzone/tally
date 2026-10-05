@@ -76,6 +76,9 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [theme, setTheme] = useState<ThemePref>(() => getStoredTheme());
+  // Collapsed shows just today and yesterday; expanding reveals more days
+  // and takes over the screen, hiding the metrics panel to make room.
+  const [gridExpanded, setGridExpanded] = useState(false);
 
   function handleThemeChange(next: ThemePref) {
     setTheme(next);
@@ -232,16 +235,20 @@ function Board({ uid, displayName, onSignOut }: BoardProps) {
           onTextChange={handleTextChange}
           onLoadMore={handleLoadMore}
           onRequestAddActivity={() => setShowAddForm(true)}
+          expanded={gridExpanded}
+          onToggleExpand={() => setGridExpanded((prev) => !prev)}
         />
-        <StatsPanel
-          activities={activities}
-          days={days}
-          totalGoal={totalGoal}
-          mode={mode}
-          onModeChange={setMode}
-          onUpdateActivity={handleUpdateActivity}
-          onUpdateTotalGoal={handleUpdateTotalGoal}
-        />
+        {!gridExpanded && (
+          <StatsPanel
+            activities={activities}
+            days={days}
+            totalGoal={totalGoal}
+            mode={mode}
+            onModeChange={setMode}
+            onUpdateActivity={handleUpdateActivity}
+            onUpdateTotalGoal={handleUpdateTotalGoal}
+          />
+        )}
       </div>
 
       {showSettings && (

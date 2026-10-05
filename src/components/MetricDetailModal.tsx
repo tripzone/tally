@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
-import { dayOfYear, todayStr, weekStart, yearProgress } from '../dateUtils';
+import { addDays, dayOfYear, monthEnd, monthStart, todayStr, weekStart, yearProgress } from '../dateUtils';
 
 interface MetricDetailModalProps {
   label: string;
@@ -12,12 +12,13 @@ interface MetricDetailModalProps {
 }
 
 const SWIPE_THRESHOLD = 40;
-const WEEKS_IN_YEAR = 52;
 
-type ChartMode = 'weekly' | 'cumulative';
+type ViewMode = 'bar' | 'cumulative';
+type Grain = 'week' | 'month';
 
-interface WeekPoint {
-  week: string; // Monday date, YYYY-MM-DD
+interface PeriodPoint {
+  start: string; // YYYY-MM-DD, start of the week/month
+  end: string; // YYYY-MM-DD, end of the week/month (may be in the future)
   value: number;
 }
 
@@ -25,38 +26,48 @@ function round(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function computeWeeklySeries(
+function periodsPerYear(grain: Grain): number {
+  return grain === 'week' ? 52 : 12;
+}
+
+function computeSeries(
   dailyValues: Record<string, number>,
   statMode: 'sum' | 'average',
-  chartMode: ChartMode
-): WeekPoint[] {
+  viewMode: ViewMode,
+  grain: Grain
+): PeriodPoint[] {
   const dates = Object.keys(dailyValues).sort();
   if (dates.length === 0) return [];
 
-  const weekTotals = new Map<string, { sum: number; count: number }>();
+  const totals = new Map<string, { sum: number; count: number }>();
   for (const dateStr of dates) {
-    const ws = weekStart(dateStr);
-    const entry = weekTotals.get(ws) ?? { sum: 0, count: 0 };
+    const key = grain === 'week' ? weekStart(dateStr) : monthStart(dateStr);
+    const entry = totals.get(key) ?? { sum: 0, count: 0 };
     entry.sum += dailyValues[dateStr];
     entry.count += 1;
-    weekTotals.set(ws, entry);
+    totals.set(key, entry);
   }
 
-  const sortedWeeks = [...weekTotals.keys()].sort();
+  const sortedKeys = [...totals.keys()].sort();
   let cumSum = 0;
   let cumCount = 0;
-  return sortedWeeks.map((ws) => {
-    const { sum, count } = weekTotals.get(ws)!;
+  return sortedKeys.map((key) => {
+    const { sum, count } = totals.get(key)!;
     cumSum += sum;
     cumCount += count;
-    const weekly = statMode === 'average' ? (count > 0 ? sum / count : 0) : sum;
-    const cumulative = statMode === 'average' ? (cumCount > 0 ? cumSum / cumCount : 0) : cumSum;
-    return { week: ws, value: round(chartMode === 'weekly' ? weekly : cumulative) };
+    const periodValue = statMode === 'average' ? (count > 0 ? sum / count : 0) : sum;
+    const cumulativeValue = statMode === 'average' ? (cumCount > 0 ? cumSum / cumCount : 0) : cumSum;
+    return {
+      start: key,
+      end: grain === 'week' ? addDays(key, 6) : monthEnd(key),
+      value: round(viewMode === 'cumulative' ? cumulativeValue : periodValue),
+    };
   });
 }
 
-function formatWeekLabel(weekStr: string): string {
-  const d = new Date(`${weekStr}T00:00:00`);
+function formatPeriodLabel(dateStr: string, grain: Grain): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (grain === 'month') return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -73,10 +84,11 @@ export default function MetricDetailModal({
   onClose,
   onNavigate,
 }: MetricDetailModalProps) {
-  const [chartMode, setChartMode] = useState<ChartMode>('weekly');
+  const [viewMode, setViewMode] = useState<ViewMode>('bar');
+  const [grain, setGrain] = useState<Grain>('week');
   const series = useMemo(
-    () => computeWeeklySeries(dailyValues, statMode, chartMode),
-    [dailyValues, statMode, chartMode]
+    () => computeSeries(dailyValues, statMode, viewMode, grain),
+    [dailyValues, statMode, viewMode, grain]
   );
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [goalInput, setGoalInput] = useState(goal != null ? String(goal) : '');
@@ -120,11 +132,12 @@ export default function MetricDetailModal({
     if (!Number.isNaN(num) && num !== goal) onUpdateGoal(num);
   }
 
-  const isCumulative = chartMode === 'cumulative';
-  // A summed goal is annual, so in weekly mode it becomes a per-week
-  // target. An averaged goal is already comparable to a weekly average.
+  const isCumulative = viewMode === 'cumulative';
+  // A summed goal is annual, so outside cumulative view it becomes a
+  // per-period target (per week or per month). An averaged goal is
+  // already comparable to a period average, in either view.
   const goalLine =
-    goal == null ? null : isCumulative || statMode === 'average' ? goal : round(goal / WEEKS_IN_YEAR);
+    goal == null ? null : isCumulative || statMode === 'average' ? goal : round(goal / periodsPerYear(grain));
 
   const values = series.map((p) => p.value);
   const allValues = goalLine != null ? [...values, goalLine] : values;
@@ -144,19 +157,30 @@ export default function MetricDetailModal({
   const daysElapsed = dayOfYear(today);
 
   function xAt(dateStr: string): number {
+    const clamped = dateStr > today ? today : dateStr;
     if (daysElapsed <= 1) return PAD.left;
-    return PAD.left + ((dayOfYear(dateStr) - 1) / (daysElapsed - 1)) * innerWidth;
+    return PAD.left + ((dayOfYear(clamped) - 1) / (daysElapsed - 1)) * innerWidth;
   }
   function yAt(value: number): number {
     return PAD.top + (1 - (value - minY) / spanY) * innerHeight;
   }
 
-  const linePath = series.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xAt(p.week)} ${yAt(p.value)}`).join(' ');
+  // Where a point "sits" on the x axis: a cumulative line anchors each dot
+  // to the start of its period, while a bar is centered across however
+  // much of the period has actually elapsed (so an in-progress week or
+  // month gets a narrower bar instead of overhanging past today).
+  function centerX(p: PeriodPoint): number {
+    return isCumulative ? xAt(p.start) : (xAt(p.start) + xAt(p.end)) / 2;
+  }
+
+  const linePath = isCumulative
+    ? series.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xAt(p.start)} ${yAt(p.value)}`).join(' ')
+    : '';
   const lastPoint = series[series.length - 1];
   const hovered = hoverIndex != null ? series[hoverIndex] : null;
 
   // The sloped pace line only makes sense against a cumulative total --
-  // in weekly mode the equivalent target is the flat per-week goal line.
+  // outside cumulative view the equivalent target is the flat goal line.
   const paceToday = isCumulative && goal != null ? goal * yearProgress(today) : null;
   const paceLinePath =
     paceToday != null ? `M ${xAt(`${referenceYear}-01-01`)} ${yAt(0)} L ${xAt(today)} ${yAt(paceToday)}` : null;
@@ -168,7 +192,7 @@ export default function MetricDetailModal({
     let nearest = 0;
     let nearestDist = Infinity;
     series.forEach((p, i) => {
-      const dist = Math.abs(xAt(p.week) - x);
+      const dist = Math.abs(centerX(p) - x);
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = i;
@@ -176,6 +200,8 @@ export default function MetricDetailModal({
     });
     setHoverIndex(nearest);
   }
+
+  const periodLabel = grain === 'week' ? 'week' : 'month';
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -196,28 +222,42 @@ export default function MetricDetailModal({
         </div>
         <p className="settings-hint">
           {isCumulative
-            ? `Cumulative ${statMode === 'average' ? 'average' : 'total'} by week`
-            : `Weekly ${statMode === 'average' ? 'average' : 'total'}`}
+            ? `Cumulative ${statMode === 'average' ? 'average' : 'total'} by ${periodLabel}`
+            : `${grain === 'week' ? 'Weekly' : 'Monthly'} ${statMode === 'average' ? 'average' : 'total'}`}
         </p>
         {isCumulative && goal != null && (
           <p className="settings-hint chart-pace-hint">Dotted line = pace to reach the goal by Dec 31</p>
         )}
 
-        <div className="chart-mode-choice">
-          <button
-            type="button"
-            className={`type-btn ${!isCumulative ? 'active' : ''}`}
-            onClick={() => setChartMode('weekly')}
-          >
-            Weekly
-          </button>
-          <button
-            type="button"
-            className={`type-btn ${isCumulative ? 'active' : ''}`}
-            onClick={() => setChartMode('cumulative')}
-          >
-            Cumulative
-          </button>
+        <div className="chart-controls">
+          <div className="chart-mode-choice">
+            <button type="button" className={`type-btn ${grain === 'week' ? 'active' : ''}`} onClick={() => setGrain('week')}>
+              Week
+            </button>
+            <button
+              type="button"
+              className={`type-btn ${grain === 'month' ? 'active' : ''}`}
+              onClick={() => setGrain('month')}
+            >
+              Month
+            </button>
+          </div>
+          <div className="chart-mode-choice">
+            <button
+              type="button"
+              className={`type-btn ${!isCumulative ? 'active' : ''}`}
+              onClick={() => setViewMode('bar')}
+            >
+              Bar
+            </button>
+            <button
+              type="button"
+              className={`type-btn ${isCumulative ? 'active' : ''}`}
+              onClick={() => setViewMode('cumulative')}
+            >
+              Cumulative
+            </button>
+          </div>
         </div>
 
         {series.length === 0 ? (
@@ -242,41 +282,63 @@ export default function MetricDetailModal({
                     className="chart-goal-line"
                   />
                   <text x={CHART_WIDTH - PAD.right} y={yAt(goalLine) - 4} className="chart-goal-label" textAnchor="end">
-                    {isCumulative ? `Goal ${goalLine}` : `Goal/wk ${goalLine}`}
+                    {isCumulative ? `Goal ${goalLine}` : `Goal/${grain === 'week' ? 'wk' : 'mo'} ${goalLine}`}
                   </text>
                 </>
               )}
 
               {paceLinePath && <path d={paceLinePath} className="chart-pace-line" fill="none" />}
 
-              <path d={linePath} className="chart-line" fill="none" />
-
-              {series.map((p, i) => (
-                <circle
-                  key={p.week}
-                  cx={xAt(p.week)}
-                  cy={yAt(p.value)}
-                  r={i === hoverIndex ? 4 : 2.5}
-                  className="chart-dot"
-                />
-              ))}
+              {isCumulative ? (
+                <>
+                  <path d={linePath} className="chart-line" fill="none" />
+                  {series.map((p, i) => (
+                    <circle
+                      key={p.start}
+                      cx={xAt(p.start)}
+                      cy={yAt(p.value)}
+                      r={i === hoverIndex ? 4 : 2.5}
+                      className="chart-dot"
+                    />
+                  ))}
+                </>
+              ) : (
+                series.map((p, i) => {
+                  const x0 = xAt(p.start);
+                  const x1 = Math.max(xAt(p.end), x0 + 2);
+                  const barPad = Math.min(1.5, (x1 - x0) / 4);
+                  const top = Math.min(yAt(0), yAt(p.value));
+                  const height = Math.max(Math.abs(yAt(0) - yAt(p.value)), 1);
+                  return (
+                    <rect
+                      key={p.start}
+                      x={x0 + barPad}
+                      y={top}
+                      width={Math.max(x1 - x0 - barPad * 2, 1)}
+                      height={height}
+                      rx={1.5}
+                      className={`chart-bar ${i === hoverIndex ? 'chart-bar-hover' : ''}`}
+                    />
+                  );
+                })
+              )}
 
               {paceToday != null && (
                 <circle cx={xAt(today)} cy={yAt(paceToday)} r={3.5} className="chart-pace-dot" />
               )}
 
-              {hovered && hoverIndex != null && (
+              {isCumulative && hovered && hoverIndex != null && (
                 <line
-                  x1={xAt(hovered.week)}
+                  x1={centerX(hovered)}
                   y1={PAD.top}
-                  x2={xAt(hovered.week)}
+                  x2={centerX(hovered)}
                   y2={CHART_HEIGHT - PAD.bottom}
                   className="chart-crosshair"
                 />
               )}
 
               {lastPoint && (
-                <text x={xAt(lastPoint.week)} y={yAt(lastPoint.value) - 8} className="chart-value-label" textAnchor="end">
+                <text x={centerX(lastPoint)} y={yAt(lastPoint.value) - 8} className="chart-value-label" textAnchor="end">
                   {lastPoint.value}
                 </text>
               )}
@@ -292,10 +354,11 @@ export default function MetricDetailModal({
             <div className={`chart-tooltip ${hovered ? '' : 'chart-tooltip-empty'}`}>
               {hovered ? (
                 <>
-                  Week of {formatWeekLabel(hovered.week)}: <strong>{hovered.value}</strong>
+                  {grain === 'week' ? 'Week of ' : ''}
+                  {formatPeriodLabel(hovered.start, grain)}: <strong>{hovered.value}</strong>
                 </>
               ) : (
-                ' '
+                ' '
               )}
             </div>
           </div>

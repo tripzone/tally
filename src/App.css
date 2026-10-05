@@ -252,13 +252,11 @@
 }
 
 .grid-wrap.expanded {
-  /* Five more days on top of today and yesterday, capped so the stats
-     panel below still gets room on short screens. */
-  height: calc(
-    var(--row-h-header) + var(--row-h-today) + var(--row-h-yesterday) + 5 * var(--row-h-normal) +
-      var(--grid-expand-h)
-  );
-  max-height: 60dvh;
+  /* The stats panel is unmounted while expanded, so the grid is free to
+     take over the rest of the screen below the header. */
+  flex: 1;
+  height: auto;
+  max-height: none;
 }
 
 .grid-scroll {
@@ -858,6 +856,12 @@
   background: var(--surface-2);
 }
 
+.chart-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .chart-mode-choice {
   display: flex;
   gap: 8px;
@@ -953,6 +957,16 @@
 
 .chart-dot {
   fill: var(--accent);
+}
+
+.chart-bar {
+  fill: var(--accent);
+  opacity: 0.75;
+  transition: opacity 0.1s ease;
+}
+
+.chart-bar-hover {
+  opacity: 1;
 }
 
 .chart-crosshair {
